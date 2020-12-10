@@ -12,6 +12,8 @@ BORDER = 10
 FPS = 5
 BACKGROUND_COLOR = (235, 235, 235)
 
+COLOR_PRESETS = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+
 CELLS = {}
 DIRECTIONS = [
     [(-1, 0), (-1, 0)],
@@ -21,16 +23,33 @@ DIRECTIONS = [
     [(0, -1), (1, -1)],
     [(-1, -1), (0, -1)]
 ]
+KEY_DIRECTIONS = {
+    pg.K_KP5: 0,
+    pg.K_KP6: 1,
+    pg.K_KP3: 2,
+    pg.K_KP2: 3,
+    pg.K_KP1: 4,
+    pg.K_KP4: 5
+}
+
+
+class SnakeCrashException(Exception):
+    pass
 
 
 class Snake:
-    START_LEN = 5
+    START_LEN = 15
 
     def __init__(self):
         self.coords = [(ROW_COUNT // 2, COL_COUNT // 2)]
         self.direction = random.randint(0, 5)
         for _ in range(self.START_LEN - 1):
             self.coords.append(CELLS[self.coords[-1]][(self.direction + 3) % 6])
+        self.color = random.choice(COLOR_PRESETS)
+
+    def set_direction(self, next_direction):
+        if (self.direction + 3) % 6 != next_direction:
+            self.direction = next_direction
 
     def step(self):
         head = self.coords[0]
@@ -44,9 +63,12 @@ class Snake:
         self.coords = [next_head] + self.coords
         self.coords = self.coords[:-1]
 
+        if len(set(self.coords)) < len(self.coords):
+            raise SnakeCrashException()
+
     def draw(self, surface):
         for segment in self.coords:
-            pg.draw.polygon(surface, (255, 0, 0), CELLS[segment]['coords'])
+            pg.draw.polygon(surface, self.color, CELLS[segment]['coords'])
 
 
 def main():
@@ -105,13 +127,20 @@ def main():
             if event.type == pg.QUIT:
                 pg.quit()
                 exit()
+            if event.type == pg.KEYDOWN:
+                next_direction = KEY_DIRECTIONS.get(event.key)
+                if next_direction is not None:
+                    snake.set_direction(next_direction)
+
+        try:
+            snake.step()
+        except SnakeCrashException:
+            snake = Snake()
 
         sc.fill(BACKGROUND_COLOR)
         sc.blit(hexen_surface, (0, 0))
         snake.draw(sc)
         pg.display.update()
-
-        snake.step()
 
         clock.tick(FPS)
 
