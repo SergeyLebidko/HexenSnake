@@ -10,7 +10,7 @@ NORMAL = RADIUS * cos(pi / 6)
 HEX_MARGIN = 3
 FOOD_SIZE = RADIUS - HEX_MARGIN - 10
 BORDER = 10
-FPS = 5
+FPS = 30
 BACKGROUND_COLOR = (235, 235, 235)
 
 COLOR_PRESETS = [
@@ -72,6 +72,7 @@ class Snake:
         for _ in range(self.START_LEN - 1):
             self.coords.append(CELLS[self.coords[-1]][(self.direction + 3) % 6])
         self.color = random.choice(COLOR_PRESETS)
+        self.eat_count = 0
 
     def set_direction(self, next_direction):
         if (self.direction + 3) % 6 != next_direction:
@@ -93,11 +94,37 @@ class Snake:
         if len(set(self.coords)) < len(self.coords):
             raise SnakeCrashException()
 
-        return self.coords[0] == food['cell']
+        eat_flag = self.coords[0] == food['cell']
+        if eat_flag:
+            self.eat_count += 1
+        return eat_flag
 
     def draw(self, surface):
         for segment in self.coords:
             pg.draw.polygon(surface, self.color, CELLS[segment]['coords'])
+
+
+class Tab:
+
+    def __init__(self, font, window_width, window_height):
+        self.font = font
+        self.window_width = window_width
+        self.window_height = window_height
+        self.current_text = None
+        self.tab_surface = None
+        self.tab_surface_pos = None
+
+    def draw(self, surface, text):
+        if text != self.current_text:
+            self.current_text = text
+            self.tab_surface = self.font.render(self.current_text, True, (0, 0, 0))
+            self.tab_surface.set_alpha(20)
+            self.tab_surface_pos = (
+                self.window_width // 2 - self.tab_surface.get_rect().width // 2,
+                self.window_height // 2 - self.tab_surface.get_rect().height // 2
+            )
+
+        surface.blit(self.tab_surface, self.tab_surface_pos)
 
 
 def main():
@@ -151,6 +178,9 @@ def main():
     pg.display.set_caption(WINDOW_TITLE)
     clock = pg.time.Clock()
 
+    font = pg.font.Font(None, 512)
+    tab = Tab(font, window_width, window_height)
+
     pause = False
     while True:
         events = pg.event.get()
@@ -180,6 +210,10 @@ def main():
 
         sc.fill(BACKGROUND_COLOR)
         sc.blit(hexen_surface, (0, 0))
+        if pause:
+            tab.draw(sc, 'PAUSE')
+        else:
+            tab.draw(sc, str(snake.eat_count))
         draw_food(sc, food)
         snake.draw(sc)
         pg.display.update()
