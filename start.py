@@ -8,11 +8,12 @@ ROW_COUNT = 15
 RADIUS = 30
 NORMAL = RADIUS * cos(pi / 6)
 HEX_MARGIN = 3
+FOOD_SIZE = RADIUS - HEX_MARGIN - 10
 BORDER = 10
 FPS = 5
 BACKGROUND_COLOR = (235, 235, 235)
 
-COLOR_PRESETS = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+COLOR_PRESETS = [(255, 0, 0), (0, 255, 0), (80, 100, 255)]
 
 CELLS = {}
 DIRECTIONS = [
@@ -33,12 +34,26 @@ KEY_DIRECTIONS = {
 }
 
 
+def create_food(snake):
+    cell = random.choice(list(set(CELLS.keys()) - set(snake.coords)))
+    color = random.choice(list(set(COLOR_PRESETS) - {snake.color}))
+    return {
+        'cell': cell,
+        'center': CELLS[cell]['center'],
+        'color': color
+    }
+
+
+def draw_food(surface, food):
+    pg.draw.circle(surface, food['color'], food['center'], FOOD_SIZE)
+
+
 class SnakeCrashException(Exception):
     pass
 
 
 class Snake:
-    START_LEN = 15
+    START_LEN = 5
 
     def __init__(self):
         self.coords = [(ROW_COUNT // 2, COL_COUNT // 2)]
@@ -51,7 +66,7 @@ class Snake:
         if (self.direction + 3) % 6 != next_direction:
             self.direction = next_direction
 
-    def step(self):
+    def step(self, food):
         head = self.coords[0]
         next_head = CELLS[head][self.direction]
         if None in next_head:
@@ -61,10 +76,13 @@ class Snake:
                 next_head = CELLS[next_head][contr_direction]
 
         self.coords = [next_head] + self.coords
-        self.coords = self.coords[:-1]
+        if self.coords[0] != food['cell']:
+            self.coords = self.coords[:-1]
 
         if len(set(self.coords)) < len(self.coords):
             raise SnakeCrashException()
+
+        return self.coords[0] == food['cell']
 
     def draw(self, surface):
         for segment in self.coords:
@@ -104,7 +122,7 @@ def main():
     # Отрисовываем сами гексы
     delta_alpha = pi / 3
     for cell in CELLS.keys():
-        x0, y0 = CELLS[cell].pop('center')
+        x0, y0 = CELLS[cell]['center']
         alpha = 0
         coords = []
         for _ in range(6):
@@ -114,6 +132,7 @@ def main():
         CELLS[cell]['coords'] = coords
 
     snake = Snake()
+    food = create_food(snake)
 
     # Инициализируем окно
     pg.init()
@@ -133,12 +152,18 @@ def main():
                     snake.set_direction(next_direction)
 
         try:
-            snake.step()
+            eat_flag = snake.step(food)
         except SnakeCrashException:
             snake = Snake()
+            food = create_food(snake)
+        else:
+            if eat_flag:
+                snake.color = food['color']
+                food = create_food(snake)
 
         sc.fill(BACKGROUND_COLOR)
         sc.blit(hexen_surface, (0, 0))
+        draw_food(sc, food)
         snake.draw(sc)
         pg.display.update()
 
