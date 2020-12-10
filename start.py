@@ -30,11 +30,18 @@ class Snake:
         self.coords = [(ROW_COUNT // 2, COL_COUNT // 2)]
         self.direction = random.randint(0, 5)
         for _ in range(self.START_LEN - 1):
-            self.coords.append(CELLS[self.coords[-1]][self.direction])
-        self.direction = (self.direction + 3) % 6
+            self.coords.append(CELLS[self.coords[-1]][(self.direction + 3) % 6])
 
     def step(self):
-        self.coords = [CELLS[self.coords[0]][self.direction]] + self.coords
+        head = self.coords[0]
+        next_head = CELLS[head][self.direction]
+        if None in next_head:
+            contr_direction = (self.direction + 3) % 6
+            next_head = head
+            while not (None in CELLS[next_head][contr_direction]):
+                next_head = CELLS[next_head][contr_direction]
+
+        self.coords = [next_head] + self.coords
         self.coords = self.coords[:-1]
 
     def draw(self, surface):
