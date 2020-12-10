@@ -13,7 +13,18 @@ BORDER = 10
 FPS = 5
 BACKGROUND_COLOR = (235, 235, 235)
 
-COLOR_PRESETS = [(255, 0, 0), (0, 255, 0), (80, 100, 255)]
+COLOR_PRESETS = [
+    (255, 0, 0),
+    (5, 200, 100),
+    (0, 0, 255),
+    (128, 0, 255),
+    (255, 0, 255),
+    (255, 128, 0),
+    (30, 30, 30),
+    (150, 150, 150),
+    (175, 62, 18),
+    (0, 128, 255)
+]
 
 CELLS = {}
 DIRECTIONS = [
@@ -140,6 +151,7 @@ def main():
     pg.display.set_caption(WINDOW_TITLE)
     clock = pg.time.Clock()
 
+    pause = False
     while True:
         events = pg.event.get()
         for event in events:
@@ -147,19 +159,24 @@ def main():
                 pg.quit()
                 exit()
             if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
+                    pause = not pause
+                    continue
+
                 next_direction = KEY_DIRECTIONS.get(event.key)
                 if next_direction is not None:
                     snake.set_direction(next_direction)
 
-        try:
-            eat_flag = snake.step(food)
-        except SnakeCrashException:
-            snake = Snake()
-            food = create_food(snake)
-        else:
-            if eat_flag:
-                snake.color = food['color']
+        if not pause:
+            try:
+                eat_flag = snake.step(food)
+            except SnakeCrashException:
+                snake = Snake()
                 food = create_food(snake)
+            else:
+                if eat_flag:
+                    snake.color = food['color']
+                    food = create_food(snake)
 
         sc.fill(BACKGROUND_COLOR)
         sc.blit(hexen_surface, (0, 0))
