@@ -127,6 +127,31 @@ class Tab:
         surface.blit(self.tab_surface, self.tab_surface_pos)
 
 
+class SpeedController:
+    SPEED_LIMIT = 6
+
+    def __init__(self):
+        self.current_speed = self.SPEED_LIMIT
+        self.counter = 0
+
+    def speed_plus(self):
+        if self.current_speed > 0:
+            self.current_speed -= 1
+
+    def speed_minus(self):
+        if self.current_speed < self.SPEED_LIMIT:
+            self.current_speed += 1
+
+    def enable_frame(self):
+        self.counter += 1
+        if self.counter > self.current_speed:
+            self.counter = 0
+        return self.counter == self.current_speed
+
+    def get_speed_for_display(self):
+        return self.SPEED_LIMIT - self.current_speed + 1
+
+
 def main():
     # Вычисляем размеры окна
     window_width = 2 * BORDER + 2 * NORMAL * cos(pi / 6) * (COL_COUNT - 1) + (2 * RADIUS)
@@ -171,11 +196,12 @@ def main():
 
     snake = Snake()
     food = create_food(snake)
+    speed_controller = SpeedController()
 
     # Инициализируем окно
     pg.init()
     sc = pg.display.set_mode((window_width, window_height))
-    pg.display.set_caption(WINDOW_TITLE)
+    pg.display.set_caption(f'{WINDOW_TITLE} - скорость: {speed_controller.get_speed_for_display()}')
     clock = pg.time.Clock()
 
     font = pg.font.Font(None, 512)
@@ -183,30 +209,39 @@ def main():
 
     pause = False
     while True:
-        events = pg.event.get()
-        for event in events:
-            if event.type == pg.QUIT:
-                pg.quit()
-                exit()
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_SPACE:
-                    pause = not pause
-                    continue
+        if speed_controller.enable_frame():
+            events = pg.event.get()
+            for event in events:
+                if event.type == pg.QUIT:
+                    pg.quit()
+                    exit()
+                if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_KP_MINUS:
+                        speed_controller.speed_minus()
+                        pg.display.set_caption(f'{WINDOW_TITLE} - скорость: {speed_controller.get_speed_for_display()}')
 
-                next_direction = KEY_DIRECTIONS.get(event.key)
-                if next_direction is not None:
-                    snake.set_direction(next_direction)
+                    if event.key == pg.K_KP_PLUS:
+                        speed_controller.speed_plus()
+                        pg.display.set_caption(f'{WINDOW_TITLE} - скорость: {speed_controller.get_speed_for_display()}')
 
-        if not pause:
-            try:
-                eat_flag = snake.step(food)
-            except SnakeCrashException:
-                snake = Snake()
-                food = create_food(snake)
-            else:
-                if eat_flag:
-                    snake.color = food['color']
+                    if event.key == pg.K_SPACE:
+                        pause = not pause
+                        continue
+
+                    next_direction = KEY_DIRECTIONS.get(event.key)
+                    if next_direction is not None:
+                        snake.set_direction(next_direction)
+
+            if not pause:
+                try:
+                    eat_flag = snake.step(food)
+                except SnakeCrashException:
+                    snake = Snake()
                     food = create_food(snake)
+                else:
+                    if eat_flag:
+                        snake.color = food['color']
+                        food = create_food(snake)
 
         sc.fill(BACKGROUND_COLOR)
         sc.blit(hexen_surface, (0, 0))
